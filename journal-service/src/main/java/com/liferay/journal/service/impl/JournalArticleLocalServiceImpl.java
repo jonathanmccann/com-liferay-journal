@@ -2661,7 +2661,7 @@ public class JournalArticleLocalServiceImpl
 		if (article == null) {
 			throw new NoSuchArticleException(
 				"No approved JournalArticle exists with the key {groupId=" +
-					groupId + ", " + "articleId=" + articleId + "}");
+					groupId + ", articleId=" + articleId + "}");
 		}
 
 		return article;
@@ -4980,6 +4980,7 @@ public class JournalArticleLocalServiceImpl
 			expirationDateYear = expirationCal.get(Calendar.YEAR);
 			expirationDateHour = expirationCal.get(Calendar.HOUR);
 			expirationDateMinute = expirationCal.get(Calendar.MINUTE);
+
 			neverExpire = false;
 
 			if (expirationCal.get(Calendar.AM_PM) == Calendar.PM) {
@@ -5007,6 +5008,7 @@ public class JournalArticleLocalServiceImpl
 			reviewDateYear = reviewCal.get(Calendar.YEAR);
 			reviewDateHour = reviewCal.get(Calendar.HOUR);
 			reviewDateMinute = reviewCal.get(Calendar.MINUTE);
+
 			neverReview = false;
 
 			if (reviewCal.get(Calendar.AM_PM) == Calendar.PM) {
@@ -5899,7 +5901,7 @@ public class JournalArticleLocalServiceImpl
 				catch (Exception e) {
 					_log.error(
 						"Unable to send email to notify the change of status " +
-							" to " + msg + " for article " + article.getId() +
+							"to " + msg + " for article " + article.getId() +
 								": " + e.getMessage());
 				}
 			}
@@ -6385,6 +6387,7 @@ public class JournalArticleLocalServiceImpl
 						WebServerServletTokenUtil.getToken(imageId);
 
 				dynamicContentEl.setText(elContent);
+
 				dynamicContentEl.addAttribute("id", String.valueOf(imageId));
 			}
 		}
@@ -6571,6 +6574,12 @@ public class JournalArticleLocalServiceImpl
 		String value = dynamicContentElement.getText();
 
 		if (Validator.isNull(value)) {
+			return;
+		}
+
+		String previewURLPrefix = PortalUtil.getPathContext() + "/documents/";
+
+		if (value.startsWith(previewURLPrefix)) {
 			return;
 		}
 
