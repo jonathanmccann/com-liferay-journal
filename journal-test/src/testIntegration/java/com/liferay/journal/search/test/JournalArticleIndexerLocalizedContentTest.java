@@ -64,12 +64,15 @@ import org.junit.runner.RunWith;
  * @author André de Oliveira
  */
 @RunWith(Arquillian.class)
+@Sync
 public class JournalArticleIndexerLocalizedContentTest {
 
 	@ClassRule
 	@Rule
-	public static LiferayIntegrationTestRule liferayIntegrationTestRule =
-		new LiferayIntegrationTestRule();
+	public static final AggregateTestRule aggregateTestRule =
+		new AggregateTestRule(
+			new LiferayIntegrationTestRule(),
+			SynchronousDestinationTestRule.INSTANCE);
 
 	@Before
 	public void setUp() throws Exception {
