@@ -304,14 +304,16 @@ public class JournalContentSearchLocalServiceImpl
 			String portletId, String articleId, boolean purge)
 		throws PortalException {
 
+		JournalContentSearch contentSearch = null;
+
 		if (purge) {
 			journalContentSearchPersistence.removeByG_P_L_P(
 				groupId, privateLayout, layoutId, portletId);
 		}
-
-		JournalContentSearch contentSearch =
-			journalContentSearchPersistence.fetchByG_P_L_P_A(
+		else {
+			contentSearch = journalContentSearchPersistence.fetchByG_P_L_P_A(
 				groupId, privateLayout, layoutId, portletId, articleId);
+		}
 
 		if (contentSearch == null) {
 			Group group = groupLocalService.getGroup(groupId);
