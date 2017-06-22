@@ -156,9 +156,10 @@ public class JournalContentSearchLocalServiceImpl
 						String classPK = displayInformationProvider.getClassPK(
 							portletPreferences);
 
-						updateContentSearch(
-							layout.getGroupId(), layout.isPrivateLayout(),
-							layout.getLayoutId(), portletId, classPK);
+						_addContentSearch(
+							layout.getGroupId(), companyId,
+							layout.isPrivateLayout(), layout.getLayoutId(),
+							portletId, classPK);
 					}
 				}
 
