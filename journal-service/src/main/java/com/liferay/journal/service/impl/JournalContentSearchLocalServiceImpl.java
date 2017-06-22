@@ -308,13 +308,13 @@ public class JournalContentSearchLocalServiceImpl
 				groupId, privateLayout, layoutId, portletId);
 		}
 
-		Group group = groupLocalService.getGroup(groupId);
-
 		JournalContentSearch contentSearch =
 			journalContentSearchPersistence.fetchByG_P_L_P_A(
 				groupId, privateLayout, layoutId, portletId, articleId);
 
 		if (contentSearch == null) {
+			Group group = groupLocalService.getGroup(groupId);
+
 			long contentSearchId = counterLocalService.increment();
 
 			contentSearch = journalContentSearchPersistence.create(
@@ -326,9 +326,9 @@ public class JournalContentSearchLocalServiceImpl
 			contentSearch.setLayoutId(layoutId);
 			contentSearch.setPortletId(portletId);
 			contentSearch.setArticleId(articleId);
-		}
 
-		journalContentSearchPersistence.update(contentSearch);
+			journalContentSearchPersistence.update(contentSearch);
+		}
 
 		return contentSearch;
 	}
