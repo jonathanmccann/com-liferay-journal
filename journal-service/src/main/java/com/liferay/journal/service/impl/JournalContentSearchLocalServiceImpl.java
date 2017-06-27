@@ -81,32 +81,12 @@ public class JournalContentSearchLocalServiceImpl
 
 				@Override
 				public void addCriteria(DynamicQuery dynamicQuery) {
-					DynamicQuery groupDynamicQuery =
-						DynamicQueryFactoryUtil.forClass(Group.class);
-
-					Property companyIdProperty = PropertyFactoryUtil.forName(
-						"companyId");
-					Property groupKeyProperty = PropertyFactoryUtil.forName(
-						"groupKey");
-					Property liveGroupIdProperty = PropertyFactoryUtil.forName(
-						"liveGroupId");
-					Property typeProperty = PropertyFactoryUtil.forName(
-						"type_");
-
-					groupDynamicQuery.add(companyIdProperty.eq(companyId));
-					groupDynamicQuery.add(liveGroupIdProperty.eq(0));
-					groupDynamicQuery.add(
-						groupKeyProperty.ne(GroupConstants.CONTROL_PANEL));
-					groupDynamicQuery.add(
-						typeProperty.ne(GroupConstants.TYPE_SITE_SYSTEM));
-
-					groupDynamicQuery.setProjection(
-						ProjectionFactoryUtil.property("groupId"));
-
 					Property groupIdProperty = PropertyFactoryUtil.forName(
 						"groupId");
 
-					dynamicQuery.add(groupIdProperty.in(groupDynamicQuery));
+					dynamicQuery.add(
+						groupIdProperty.in(
+							_getGroupSearchDynamicQuery(companyId)));
 				}
 
 			});
@@ -134,32 +114,12 @@ public class JournalContentSearchLocalServiceImpl
 
 				@Override
 				public void addCriteria(DynamicQuery dynamicQuery) {
-					DynamicQuery groupDynamicQuery =
-						DynamicQueryFactoryUtil.forClass(Group.class);
-
-					Property companyIdProperty = PropertyFactoryUtil.forName(
-						"companyId");
-					Property groupKeyProperty = PropertyFactoryUtil.forName(
-						"groupKey");
-					Property liveGroupIdProperty = PropertyFactoryUtil.forName(
-						"liveGroupId");
-					Property typeProperty = PropertyFactoryUtil.forName(
-						"type_");
-
-					groupDynamicQuery.add(companyIdProperty.eq(companyId));
-					groupDynamicQuery.add(liveGroupIdProperty.eq(0));
-					groupDynamicQuery.add(
-						groupKeyProperty.ne(GroupConstants.CONTROL_PANEL));
-					groupDynamicQuery.add(
-						typeProperty.ne(GroupConstants.TYPE_SITE_SYSTEM));
-
-					groupDynamicQuery.setProjection(
-						ProjectionFactoryUtil.property("groupId"));
-
 					Property groupIdProperty = PropertyFactoryUtil.forName(
 						"groupId");
 
-					dynamicQuery.add(groupIdProperty.in(groupDynamicQuery));
+					dynamicQuery.add(
+						groupIdProperty.in(
+							_getGroupSearchDynamicQuery(companyId)));
 				}
 
 			});
@@ -392,6 +352,26 @@ public class JournalContentSearchLocalServiceImpl
 		}
 
 		return contentSearches;
+	}
+
+	private DynamicQuery _getGroupSearchDynamicQuery(long companyId) {
+		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
+			Group.class);
+
+		Property companyIdProperty = PropertyFactoryUtil.forName("companyId");
+		Property groupKeyProperty = PropertyFactoryUtil.forName("groupKey");
+		Property liveGroupIdProperty = PropertyFactoryUtil.forName(
+			"liveGroupId");
+		Property typeProperty = PropertyFactoryUtil.forName("type_");
+
+		dynamicQuery.add(companyIdProperty.eq(companyId));
+		dynamicQuery.add(liveGroupIdProperty.eq(0));
+		dynamicQuery.add(groupKeyProperty.ne(GroupConstants.CONTROL_PANEL));
+		dynamicQuery.add(typeProperty.ne(GroupConstants.TYPE_SITE_SYSTEM));
+
+		dynamicQuery.setProjection(ProjectionFactoryUtil.property("groupId"));
+
+		return dynamicQuery;
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(
