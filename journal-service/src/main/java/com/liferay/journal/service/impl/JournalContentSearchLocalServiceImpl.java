@@ -20,8 +20,6 @@ import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
 import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
-import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.Property;
 import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
@@ -81,12 +79,10 @@ public class JournalContentSearchLocalServiceImpl
 
 				@Override
 				public void addCriteria(DynamicQuery dynamicQuery) {
-					Property groupIdProperty = PropertyFactoryUtil.forName(
-						"groupId");
+					Property companyIdProperty = PropertyFactoryUtil.forName(
+						"companyId");
 
-					dynamicQuery.add(
-						groupIdProperty.in(
-							_getGroupSearchDynamicQuery(companyId)));
+					dynamicQuery.add(companyIdProperty.eq(companyId));
 				}
 
 			});
@@ -99,7 +95,9 @@ public class JournalContentSearchLocalServiceImpl
 						JournalContentSearch journalContentSearch)
 					throws PortalException {
 
-					deleteJournalContentSearch(journalContentSearch);
+					if (_isValidGroup(journalContentSearch.getGroupId())) {
+						deleteJournalContentSearch(journalContentSearch);
+					}
 				}
 
 			});
@@ -114,12 +112,10 @@ public class JournalContentSearchLocalServiceImpl
 
 				@Override
 				public void addCriteria(DynamicQuery dynamicQuery) {
-					Property groupIdProperty = PropertyFactoryUtil.forName(
-						"groupId");
+					Property companyIdProperty = PropertyFactoryUtil.forName(
+						"companyId");
 
-					dynamicQuery.add(
-						groupIdProperty.in(
-							_getGroupSearchDynamicQuery(companyId)));
+					dynamicQuery.add(companyIdProperty.eq(companyId));
 				}
 
 			});
@@ -129,6 +125,10 @@ public class JournalContentSearchLocalServiceImpl
 				@Override
 				public void performAction(Layout layout)
 					throws PortalException {
+
+					if (!_isValidGroup(layout.getGroupId())) {
+						return;
+					}
 
 					LayoutTypePortlet layoutTypePortlet =
 						(LayoutTypePortlet)layout.getLayoutType();
@@ -366,24 +366,17 @@ public class JournalContentSearchLocalServiceImpl
 		return journalContentSearchPersistence.update(contentSearch);
 	}
 
-	private DynamicQuery _getGroupSearchDynamicQuery(long companyId) {
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			Group.class);
+	private boolean _isValidGroup(long groupId) {
+		Group group = groupLocalService.fetchGroup(groupId);
 
-		Property companyIdProperty = PropertyFactoryUtil.forName("companyId");
-		Property groupKeyProperty = PropertyFactoryUtil.forName("groupKey");
-		Property liveGroupIdProperty = PropertyFactoryUtil.forName(
-			"liveGroupId");
-		Property typeProperty = PropertyFactoryUtil.forName("type_");
+		if ((group == null) || group.isStagingGroup() ||
+			group.isControlPanel() ||
+			(group.getType() == GroupConstants.TYPE_SITE_SYSTEM)) {
 
-		dynamicQuery.add(companyIdProperty.eq(companyId));
-		dynamicQuery.add(liveGroupIdProperty.eq(0));
-		dynamicQuery.add(groupKeyProperty.ne(GroupConstants.CONTROL_PANEL));
-		dynamicQuery.add(typeProperty.ne(GroupConstants.TYPE_SITE_SYSTEM));
+			return false;
+		}
 
-		dynamicQuery.setProjection(ProjectionFactoryUtil.property("groupId"));
-
-		return dynamicQuery;
+		return true;
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(
