@@ -18,11 +18,15 @@ import com.liferay.journal.model.JournalContentSearch;
 import com.liferay.journal.service.base.JournalContentSearchLocalServiceBaseImpl;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
-import com.liferay.portal.kernel.dao.orm.QueryUtil;
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
+import com.liferay.portal.kernel.dao.orm.DynamicQuery;
+import com.liferay.portal.kernel.dao.orm.Property;
+import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutTypePortlet;
 import com.liferay.portal.kernel.model.PortletConstants;
@@ -67,60 +71,101 @@ public class JournalContentSearchLocalServiceImpl
 			_log.info("Checking journal content search for " + companyId);
 		}
 
-		List<Layout> layouts = new ArrayList<>();
+		ActionableDynamicQuery journalContentSearchActionableDynamicQuery =
+			getActionableDynamicQuery();
 
-		List<Group> groups = groupLocalService.search(
-			companyId, null, null, null, QueryUtil.ALL_POS, QueryUtil.ALL_POS);
+		journalContentSearchActionableDynamicQuery.setAddCriteriaMethod(
+			new ActionableDynamicQuery.AddCriteriaMethod() {
 
-		for (Group group : groups) {
+				@Override
+				public void addCriteria(DynamicQuery dynamicQuery) {
+					Property companyIdProperty = PropertyFactoryUtil.forName(
+						"companyId");
 
-			// Private layouts
-
-			deleteOwnerContentSearches(group.getGroupId(), true);
-
-			layouts.addAll(
-				layoutLocalService.getLayouts(group.getGroupId(), true));
-
-			// Public layouts
-
-			deleteOwnerContentSearches(group.getGroupId(), false);
-
-			layouts.addAll(
-				layoutLocalService.getLayouts(group.getGroupId(), false));
-		}
-
-		for (Layout layout : layouts) {
-			LayoutTypePortlet layoutTypePortlet =
-				(LayoutTypePortlet)layout.getLayoutType();
-
-			List<String> portletIds = layoutTypePortlet.getPortletIds();
-
-			for (String portletId : portletIds) {
-				String rootPortletId = PortletConstants.getRootPortletId(
-					portletId);
-
-				DisplayInformationProvider displayInformationProvider =
-					_serviceTrackerMap.getService(rootPortletId);
-
-				if (displayInformationProvider == null) {
-					continue;
+					dynamicQuery.add(companyIdProperty.eq(companyId));
 				}
 
-				PortletPreferences portletPreferences =
-					portletPreferencesLocalService.getPreferences(
-						layout.getCompanyId(),
-						PortletKeys.PREFS_OWNER_ID_DEFAULT,
-						PortletKeys.PREFS_OWNER_TYPE_LAYOUT, layout.getPlid(),
-						portletId);
+			});
+		journalContentSearchActionableDynamicQuery.setPerformActionMethod(
+			new ActionableDynamicQuery.
+				PerformActionMethod<JournalContentSearch>() {
 
-				String classPK = displayInformationProvider.getClassPK(
-					portletPreferences);
+				@Override
+				public void performAction(
+						JournalContentSearch journalContentSearch)
+					throws PortalException {
 
-				updateContentSearch(
-					layout.getGroupId(), layout.isPrivateLayout(),
-					layout.getLayoutId(), portletId, classPK);
-			}
-		}
+					if (_isValidGroup(journalContentSearch.getGroupId())) {
+						deleteJournalContentSearch(journalContentSearch);
+					}
+				}
+
+			});
+
+		journalContentSearchActionableDynamicQuery.performActions();
+
+		ActionableDynamicQuery layoutActionableDynamicQuery =
+			layoutLocalService.getActionableDynamicQuery();
+
+		layoutActionableDynamicQuery.setAddCriteriaMethod(
+			new ActionableDynamicQuery.AddCriteriaMethod() {
+
+				@Override
+				public void addCriteria(DynamicQuery dynamicQuery) {
+					Property companyIdProperty = PropertyFactoryUtil.forName(
+						"companyId");
+
+					dynamicQuery.add(companyIdProperty.eq(companyId));
+				}
+
+			});
+		layoutActionableDynamicQuery.setPerformActionMethod(
+			new ActionableDynamicQuery.PerformActionMethod<Layout>() {
+
+				@Override
+				public void performAction(Layout layout)
+					throws PortalException {
+
+					if (!_isValidGroup(layout.getGroupId())) {
+						return;
+					}
+
+					LayoutTypePortlet layoutTypePortlet =
+						(LayoutTypePortlet)layout.getLayoutType();
+
+					List<String> portletIds = layoutTypePortlet.getPortletIds();
+
+					for (String portletId : portletIds) {
+						String rootPortletId =
+							PortletConstants.getRootPortletId(portletId);
+
+						DisplayInformationProvider displayInformationProvider =
+							_serviceTrackerMap.getService(rootPortletId);
+
+						if (displayInformationProvider == null) {
+							continue;
+						}
+
+						PortletPreferences portletPreferences =
+							portletPreferencesLocalService.getPreferences(
+								layout.getCompanyId(),
+								PortletKeys.PREFS_OWNER_ID_DEFAULT,
+								PortletKeys.PREFS_OWNER_TYPE_LAYOUT,
+								layout.getPlid(), portletId);
+
+						String classPK = displayInformationProvider.getClassPK(
+							portletPreferences);
+
+						_addContentSearch(
+							layout.getGroupId(), companyId,
+							layout.isPrivateLayout(), layout.getLayoutId(),
+							portletId, classPK);
+					}
+				}
+
+			});
+
+		layoutActionableDynamicQuery.performActions();
 	}
 
 	@Override
@@ -259,32 +304,24 @@ public class JournalContentSearchLocalServiceImpl
 			String portletId, String articleId, boolean purge)
 		throws PortalException {
 
+		JournalContentSearch contentSearch = null;
+
 		if (purge) {
 			journalContentSearchPersistence.removeByG_P_L_P(
 				groupId, privateLayout, layoutId, portletId);
 		}
-
-		Group group = groupLocalService.getGroup(groupId);
-
-		JournalContentSearch contentSearch =
-			journalContentSearchPersistence.fetchByG_P_L_P_A(
+		else {
+			contentSearch = journalContentSearchPersistence.fetchByG_P_L_P_A(
 				groupId, privateLayout, layoutId, portletId, articleId);
-
-		if (contentSearch == null) {
-			long contentSearchId = counterLocalService.increment();
-
-			contentSearch = journalContentSearchPersistence.create(
-				contentSearchId);
-
-			contentSearch.setGroupId(groupId);
-			contentSearch.setCompanyId(group.getCompanyId());
-			contentSearch.setPrivateLayout(privateLayout);
-			contentSearch.setLayoutId(layoutId);
-			contentSearch.setPortletId(portletId);
-			contentSearch.setArticleId(articleId);
 		}
 
-		journalContentSearchPersistence.update(contentSearch);
+		if (contentSearch == null) {
+			Group group = groupLocalService.getGroup(groupId);
+
+			contentSearch = _addContentSearch(
+				groupId, group.getCompanyId(), privateLayout, layoutId,
+				portletId, articleId);
+		}
 
 		return contentSearch;
 	}
@@ -308,6 +345,38 @@ public class JournalContentSearchLocalServiceImpl
 		}
 
 		return contentSearches;
+	}
+
+	private JournalContentSearch _addContentSearch(
+		long groupId, long companyId, boolean privateLayout, long layoutId,
+		String portletId, String articleId) {
+
+		long contentSearchId = counterLocalService.increment();
+
+		JournalContentSearch contentSearch =
+			journalContentSearchPersistence.create(contentSearchId);
+
+		contentSearch.setGroupId(groupId);
+		contentSearch.setCompanyId(companyId);
+		contentSearch.setPrivateLayout(privateLayout);
+		contentSearch.setLayoutId(layoutId);
+		contentSearch.setPortletId(portletId);
+		contentSearch.setArticleId(articleId);
+
+		return journalContentSearchPersistence.update(contentSearch);
+	}
+
+	private boolean _isValidGroup(long groupId) {
+		Group group = groupLocalService.fetchGroup(groupId);
+
+		if ((group == null) || group.isStagingGroup() ||
+			group.isControlPanel() ||
+			(group.getType() == GroupConstants.TYPE_SITE_SYSTEM)) {
+
+			return false;
+		}
+
+		return true;
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(
