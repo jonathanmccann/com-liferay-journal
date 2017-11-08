@@ -32,6 +32,7 @@ import com.liferay.journal.transformer.JournalTransformer;
 import com.liferay.journal.transformer.JournalTransformerListenerRegistryUtil;
 import com.liferay.journal.util.comparator.ArticleVersionComparator;
 import com.liferay.petra.collection.stack.FiniteUniqueStack;
+import com.liferay.petra.string.CharPool;
 import com.liferay.petra.xml.XMLUtil;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.diff.CompareVersionsException;
@@ -72,7 +73,6 @@ import com.liferay.portal.kernel.templateparser.TransformerListener;
 import com.liferay.portal.kernel.theme.PortletDisplay;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.ArrayUtil;
-import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.FriendlyURLNormalizerUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -827,6 +827,21 @@ public class JournalUtil {
 					WorkflowConstants.STATUS_IN_TRASH,
 					WorkflowConstants.STATUS_SCHEDULED
 				});
+
+		if ((latestArticle != null) &&
+			(article.getId() == latestArticle.getId())) {
+
+			return true;
+		}
+
+		return false;
+	}
+
+	public static boolean isLatestArticle(JournalArticle article) {
+		JournalArticle latestArticle =
+			JournalArticleLocalServiceUtil.fetchLatestArticle(
+				article.getResourcePrimKey(), WorkflowConstants.STATUS_ANY,
+				false);
 
 		if ((latestArticle != null) &&
 			(article.getId() == latestArticle.getId())) {

@@ -29,6 +29,7 @@ import com.liferay.journal.service.JournalFeedLocalService;
 import com.liferay.journal.util.JournalContent;
 import com.liferay.journal.util.comparator.ArticleDisplayDateComparator;
 import com.liferay.journal.util.comparator.ArticleModifiedDateComparator;
+import com.liferay.petra.string.CharPool;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.log.Log;
@@ -41,7 +42,6 @@ import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.service.ImageLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
-import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.Http;
@@ -434,8 +434,8 @@ public class JournalRSSUtil {
 
 			try {
 				value = processContent(
-					feed, article, languageId, themeDisplay, syndEntry,
-					syndContent);
+					resourceRequest, resourceResponse, feed, article,
+					languageId, themeDisplay, syndEntry, syndContent);
 			}
 			catch (Exception e) {
 				if (_log.isWarnEnabled()) {
@@ -562,7 +562,24 @@ public class JournalRSSUtil {
 		return null;
 	}
 
+	/**
+	 * @deprecated As of 2.0.0, replaced by {@link
+	 *             #processContent(ResourceRequest, ResourceResponse,
+	 *             JournalFeed, JournalArticle, String, ThemeDisplay, SyndEntry,
+	 *             SyndContent)}
+	 */
+	@Deprecated
 	protected String processContent(
+			JournalFeed feed, JournalArticle article, String languageId,
+			ThemeDisplay themeDisplay, SyndEntry syndEntry,
+			SyndContent syndContent)
+		throws Exception {
+
+		return StringPool.BLANK;
+	}
+
+	protected String processContent(
+			ResourceRequest resourceRequest, ResourceResponse resourceResponse,
 			JournalFeed feed, JournalArticle article, String languageId,
 			ThemeDisplay themeDisplay, SyndEntry syndEntry,
 			SyndContent syndContent)
@@ -582,7 +599,7 @@ public class JournalRSSUtil {
 			JournalArticleDisplay articleDisplay = _journalContent.getDisplay(
 				feed.getGroupId(), article.getArticleId(),
 				ddmRendererTemplateKey, null, languageId, 1,
-				new PortletRequestModel() {
+				new PortletRequestModel(resourceRequest, resourceResponse) {
 
 					@Override
 					public String toXML() {
