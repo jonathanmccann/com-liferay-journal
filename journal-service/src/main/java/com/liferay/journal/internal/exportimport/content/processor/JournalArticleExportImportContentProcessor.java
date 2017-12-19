@@ -184,7 +184,7 @@ public class JournalArticleExportImportContentProcessor
 					sb.append(type);
 
 					sb.append(" was detected during import when validating ");
-					sb.append("the content below. This is not an error, it ");
+					sb.append("the content below. This is not an error; it ");
 					sb.append("typically means the ");
 					sb.append(type);
 					sb.append(" was deleted.\n");
@@ -286,9 +286,40 @@ public class JournalArticleExportImportContentProcessor
 				dynamicContentElement.addCDATA(journalArticleReference);
 
 				if (exportReferencedContent) {
-					StagedModelDataHandlerUtil.exportReferenceStagedModel(
-						portletDataContext, stagedModel, journalArticle,
-						PortletDataContext.REFERENCE_TYPE_DEPENDENCY);
+					try {
+						StagedModelDataHandlerUtil.exportReferenceStagedModel(
+							portletDataContext, stagedModel, journalArticle,
+							PortletDataContext.REFERENCE_TYPE_DEPENDENCY);
+					}
+					catch (Exception e) {
+						if (_log.isInfoEnabled() || _log.isDebugEnabled()) {
+							StringBundler messageSB = new StringBundler(
+								Validator.isNotNull(e.getMessage()) ? 12 : 10);
+
+							messageSB.append("Staged model with class name ");
+							messageSB.append(stagedModel.getModelClassName());
+							messageSB.append(" and primary key ");
+							messageSB.append(stagedModel.getPrimaryKeyObj());
+							messageSB.append(" references journal article ");
+							messageSB.append("with class primary key ");
+							messageSB.append(classPK);
+							messageSB.append(" that could not be exported ");
+							messageSB.append("due to ");
+							messageSB.append(e);
+
+							if (Validator.isNotNull(e.getMessage())) {
+								messageSB.append(": ");
+								messageSB.append(e.getMessage());
+							}
+
+							if (_log.isDebugEnabled()) {
+								_log.debug(messageSB.toString(), e);
+							}
+							else {
+								_log.info(messageSB.toString());
+							}
+						}
+					}
 				}
 				else {
 					Element entityElement =
@@ -397,6 +428,24 @@ public class JournalArticleExportImportContentProcessor
 						_journalArticleLocalService.fetchLatestArticle(classPK);
 
 					if (journalArticle == null) {
+						if (ExportImportThreadLocal.isImportInProcess()) {
+							if (_log.isDebugEnabled()) {
+								StringBundler sb = new StringBundler(7);
+
+								sb.append("An invalid web content article ");
+								sb.append("was detected during import when ");
+								sb.append("validating the content below. ");
+								sb.append("This is not an error; it ");
+								sb.append("typically means the web content ");
+								sb.append("article was deleted.\n");
+								sb.append(content);
+
+								_log.debug(sb.toString());
+							}
+
+							return;
+						}
+
 						NoSuchArticleException nsae =
 							new NoSuchArticleException(
 								StringBundler.concat(
